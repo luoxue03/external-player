@@ -629,7 +629,8 @@ const PARSER = {
             }
             // 支持传入音频优先获取 dash 格式视频，以支持更高分辨率
             if (currentPlayer.playEvent && currentPlayer.playEvent.indexOf('audio') > -1) {
-                const dash = await this.getDash(aid, cid, codecid, quality);
+                const epid = videoInfo.epid;
+                const dash = await this.getDash(aid, cid, codecid, quality, epid);
                 if (dash) {
                     currentMedia.audio = dash.audio;
                     currentMedia.video = dash.video;
@@ -757,53 +758,75 @@ const PARSER = {
                     return {
                         aid: currentEpisode.aid,
                         cid: currentEpisode.cid,
-                        title: currentEpisode.share_copy
+                        title: currentEpisode.share_copy,
+                        epid: epid
                     }
                 }
             }
         }
-        async getDash(aid, cid, codecid, quality) {
-            const url = `https://api.bilibili.com/x/player/playurl?qn=120&otype=json&fourk=1&fnver=0&fnval=4048&avid=${aid}&cid=${cid}`;
+        async getDash(aid, cid, codecid, quality, epid) {
+            const url = epid
+            ? `https://api.bilibili.com/pgc/player/web/v2/playurl?qn=120&otype=json&fourk=1&fnver=0&fnval=4048&avid=${aid}&cid=${cid}&ep_id=${epid}&from_client=BROWSER&module=bangumi&drm_tech_type=2&support_multi_audio=true`
+            : `https://api.bilibili.com/x/player/playurl?qn=120&otype=json&fourk=1&fnver=0&fnval=4048&avid=${aid}&cid=${cid}`;
+
             const response = await (await fetch(url, {
                 method: 'GET',
                 credentials: 'include'
             })).json();
-            if (!response.data) {
+            const data = epid
+                ? response.result?.video_info
+                : response.data;
+
+            if (!data) {
                 currentTryCount = MAX_TRY_COUNT;
-                throw new Error(translation.requireLoginOrVip);
+                throw new Error(response.message || translation.requireLoginOrVip);
             }
+
             let video = undefined;
             let audio = undefined;
-            let dash = response.data.dash;
+            let dash = data.dash;
             if (!dash) {
                 return undefined;
             }
+
+            const getUrl = item => item?.baseUrl || item?.base_url || item?.backupUrl?.[0] || item?.backup_url?.[0];
+
             let hiRes = dash.flac;
             let dolby = dash.dolby;
             if (hiRes && hiRes.audio) {
-                audio = hiRes.audio.baseUrl;
-            } else if (dolby && dolby.audio) {
-                audio = dolby.audio[0].base_url;
-            } else if (dash.audio) {
-                audio = dash.audio[0].baseUrl;
+                audio = getUrl(hiRes.audio);
+            } else if (dolby && dolby.audio && dolby.audio.length > 0) {
+                audio = getUrl(dolby.audio[0]);
+            } else if (dash.audio && dash.audio.length > 0) {
+                audio = getUrl(dash.audio[0]);
             }
-            let i = 0;
-            while (i < dash.video.length &&
-                dash.video[i].id > quality) {
-                i++;
+
+            const videos = dash.video || [];
+            if (videos.length === 0) {
+                return undefined;
             }
-            video = dash.video[i].baseUrl;
-            let id = dash.video[i].id;
-            while (i < dash.video.length) {
-                if (dash.video[i].id != id) {
+
+            let candidates = videos.filter(item => item.id <= quality);
+            if (candidates.length === 0) {
+                candidates = videos;
+            }
+
+            let selected = candidates[0];
+            for (const item of candidates) {
+                if (item.id !== selected.id) {
                     break;
                 }
-                if (dash.video[i].codecid == codecid) {
-                    video = dash.video[i].baseUrl;
+                if (item.codecid == codecid) {
+                    selected = item;
                     break;
                 }
-                i++;
             }
+
+            video = getUrl(selected);
+            if (!video) {
+                return undefined;
+            }
+
             return {
                 video: video,
                 audio: audio
