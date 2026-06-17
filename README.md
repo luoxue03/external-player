@@ -15,7 +15,7 @@
 
 Pornhub / SpankBang 这类站点依赖 yt-dlp extractor 和站点当前反爬策略，失败时优先尝试更新 yt-dlp、刷新本地 `cookies.txt`（如站点需要），或稍后重试。
 
-### MPV 侧建议
+### SpankBang
 
 SpankBang 的 403 可能是概率性失败；本 fork 对 userscript 只负责传入更合适的 yt-dlp 参数，不在网页侧循环拉起多个 MPV。个人 mpv-lazy 配置中另配了 `portable_config/scripts/ytdl-retry.lua`，用于在 MPV 加载 URL 失败时自动重试同一 URL。
 
@@ -49,6 +49,7 @@ SpankBang 的 403 可能是概率性失败；本 fork 对 userscript 只负责�
 - [AGE动漫](https://rentry.org/agefans)
 - Pronhub
 - Missav
+- SpankBang 
 
 > 更多网站请自行探索，可以把网站正则添加到全局配置解析器中进行尝试
 
@@ -57,17 +58,10 @@ SpankBang 的 403 可能是概率性失败；本 fork 对 userscript 只负责�
 - [Anime4K](https://github.com/bloc97/Anime4K)
 - [mpv-player/mpv](https://github.com/mpv-player/mpv)
 - [hooke007/MPV_lazy](https://github.com/hooke007/MPV_lazy)
-- [hooke007/mpv.net_CM](https://github.com/hooke007/mpv.net_CM)
-- [diana7127/mpv.net-DW](https://github.com/diana7127/mpv.net-DW)
-- [MPV-Play-BiliBili-Comments](https://github.com/itKelis/MPV-Play-BiliBili-Comments)
 - [yt-dlp/yt-dlp](https://github.com/yt-dlp/yt-dlp)
-- [bilibili-API-collect](https://github.com/SocialSisterYi/bilibili-API-collect)
 - [LuckyPuppy514/Play-With-MPV](https://github.com/LuckyPuppy514/Play-With-MPV)
+- [Telegram Web MPV Bridge](https://github.com/luoxue03/telegram-web-mpv-bridge)
 
 ## 😘 如何贡献
 
 非常欢迎你的加入！[提一个 Issue](https://github.com/LuckyPuppy514/external-player/issues/new) 或者提交一个 Pull Request。
-
-## 🃏 使用许可
-
-[MIT](https://github.com/LuckyPuppy514/external-player/blob/main/LICENSE) © LuckyPuppy514
