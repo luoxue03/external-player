@@ -2,6 +2,23 @@
 
 使用外部播放器播放网页中的视频
 
+> 本仓库是 [LuckyPuppy514/external-player](https://github.com/LuckyPuppy514/external-player) 的个人 fork。
+> 原作者署名、安装教程与 MIT 许可保持不变；本 fork 主要用于同步个人使用环境中的站点适配和 MPV 参数调整。
+
+## 🔧 Fork 维护说明
+
+本 fork 在原脚本基础上增加/调整了以下使用场景：
+
+- MissAV：从页面中提取可播放 HLS 地址，直接交给 MPV 播放，并传入必要的 `origin` / `referer`。
+- Pornhub：匹配视频页 / embed 页，交给 MPV 的 yt-dlp 流程处理；本地使用 `cookies.txt` 和浏览器 impersonation 以降低 410/403 概率。
+- SpankBang：匹配视频页 / embed 页，交给 MPV 的 yt-dlp 流程处理；当前使用 `Safari-18.0` impersonation。该站点存在概率性 403，建议在 MPV 侧配合自动重试脚本使用。
+
+Pornhub / SpankBang 这类站点依赖 yt-dlp extractor 和站点当前反爬策略，失败时优先尝试更新 yt-dlp、刷新本地 `cookies.txt`（如站点需要），或稍后重试。
+
+### MPV 侧建议
+
+SpankBang 的 403 可能是概率性失败；本 fork 对 userscript 只负责传入更合适的 yt-dlp 参数，不在网页侧循环拉起多个 MPV。个人 mpv-lazy 配置中另配了 `portable_config/scripts/ytdl-retry.lua`，用于在 MPV 加载 URL 失败时自动重试同一 URL。
+
 ## 🧱 安装
 
 ### 1. 安装油猴插件
