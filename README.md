@@ -47,6 +47,8 @@ SpankBang 的 403 可能是概率性失败；本 fork 对 userscript 只负责�
 - [CN影院](https://cnys.tv)
 - [Anime1.me](https://anime1.me)
 - [AGE动漫](https://rentry.org/agefans)
+- Pronhub
+- Missav
 
 > 更多网站请自行探索，可以把网站正则添加到全局配置解析器中进行尝试
 
