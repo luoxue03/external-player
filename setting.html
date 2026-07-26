@@ -490,6 +490,39 @@
                     <label data-translate="networkProxy">网络代理</label>
                     <input type="text" id="networkProxy" placeholder="http://127.0.0.1:7890"></input>
                 </div>
+                <div class="input-group">
+                    <label data-translate="resourceSniffing">资源嗅探兜底</label>
+                    <label class="switch">
+                        <input type="checkbox" id="resourceSniffing">
+                        <span class="switch-slider"></span>
+                    </label>
+                </div>
+                <div class="input-group">
+                    <label data-translate="defaultPlayer">默认播放器</label>
+                    <select id="defaultPlayer"></select>
+                </div>
+                <div class="input-group">
+                        <label data-translate="browserRelayMode">浏览器中继</label>
+                        <select id="browserRelayMode">
+                            <option value="auto" data-translate="relayAuto">自动</option>
+                            <option value="always" data-translate="relayAlways">始终中继</option>
+                            <option value="off" data-translate="relayOff">关闭</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label data-translate="browserRelayNotifications">浏览器中继弹出通知</label>
+                    <label class="switch">
+                        <input type="checkbox" id="browserRelayNotifications">
+                        <span class="switch-slider"></span>
+                    </label>
+                </div>
+                <div class="input-group">
+                    <label data-translate="edgeHide">贴边隐藏</label>
+                    <label class="switch">
+                        <input type="checkbox" id="edgeHide">
+                        <span class="switch-slider"></span>
+                    </label>
+                </div>
                 <label data-translate="parser">解析器</label>
                 <div class="input-group parser" id="ytdlp">
                     <label><a href="https://github.com/yt-dlp/yt-dlp" target="_blank">YTDLP</a></label>
@@ -502,7 +535,18 @@
                         <div class="radio-button" value="1440">1440P</div>
                         <div class="radio-button" value="1080">1080P</div>
                         <div class="radio-button" value="720">720P</div>
+                        <div class="radio-button" value="480">480P</div>
                     </div>
+                </div>
+                <div class="input-group parser" id="telegram">
+                    <label>TELEGRAM</label>
+                    <textarea name="regex" disabled></textarea>
+                    <textarea name="regex"></textarea>
+                </div>
+                <div class="input-group parser" id="douyu">
+                    <label>DOUYU LIVE</label>
+                    <textarea name="regex" disabled></textarea>
+                    <textarea name="regex"></textarea>
                 </div>
                 <div class="input-group parser" id="video">
                     <label><a href="https://github.com/LuckyPuppy514/external-player" target="_blank">VIDEO</a></label>
@@ -611,6 +655,14 @@
             buttonScale: 'Button Scale',
             buttonVisibilityDuration: 'Button Visibility Duration (ms, -1: Keep Visible)',
             networkProxy: 'Network Proxy',
+            resourceSniffing: 'Resource Sniffing Fallback',
+            defaultPlayer: 'Default Player',
+            browserRelayMode: 'Browser Relay',
+            browserRelayNotifications: 'Browser Relay Popup Notifications',
+            edgeHide: 'Hide At Edge',
+            relayAuto: 'Automatic',
+            relayAlways: 'Always relay',
+            relayOff: 'Off',
             reset: 'Reset',
             save: 'Save',
             delete: 'Delete',
@@ -648,6 +700,14 @@
             buttonScale: '按钮比例',
             buttonVisibilityDuration: '按钮可见时长（毫秒，-1：一直可见）',
             networkProxy: '网络代理',
+            resourceSniffing: '资源嗅探兜底',
+            defaultPlayer: '默认播放器',
+            browserRelayMode: '浏览器中继',
+            browserRelayNotifications: '浏览器中继弹出通知',
+            edgeHide: '贴边隐藏',
+            relayAuto: '自动',
+            relayAlways: '始终中继',
+            relayOff: '关闭',
             reset: '重置',
             save: '保存',
             delete: '删除',
@@ -776,17 +836,19 @@
         `);
         content.appendChild(tab);
 
-        tab.querySelector('.remove-button').onclick = () => {
-            const previousElement = tabButton.previousElementSibling;
-            sidebar.removeChild(tabButton);
-            content.removeChild(tab);
-            activateTab(previousElement.getAttribute('data-tab'));
-        };
+            tab.querySelector('.remove-button').onclick = () => {
+                const previousElement = tabButton.previousElementSibling;
+                sidebar.removeChild(tabButton);
+                content.removeChild(tab);
+                refreshDefaultPlayerOptions();
+                activateTab(previousElement.getAttribute('data-tab'));
+            };
 
         const nameInput = tab.querySelector('[name="name"]');
         nameInput.oninput = () => {
             tabButton.innerHTML = policy.createHTML(SYSTEM_SVG[tab.querySelector('[name=system] .active').getAttribute('value')] + (
                 nameInput.value || tabName));
+            refreshDefaultPlayerOptions();
         };
 
         config.system = config.system || 'windows';
@@ -810,6 +872,7 @@
         })
 
         tabButton.onclick = () => activateTab(tabId);
+        tab.querySelector('[name="enable"]').onchange = () => refreshDefaultPlayerOptions();
 
         activateTab(tabId);
     }
@@ -852,11 +915,18 @@
             }
         }
 
-        for (const key in defaultConfig.global) {
-            if (key === 'parser') {
-                continue;
+            for (const key in defaultConfig.global) {
+                if (key === 'parser') {
+                    continue;
+                }
+                const input = document.getElementById(key);
+                if (key === 'defaultPlayer' && input?.dataset.dirty !== 'true') {
+                    config.global[key] = input?.dataset.configuredValue || defaultConfig.global[key];
+                } else if (input?.type === 'checkbox') {
+                config.global[key] = input.checked;
+            } else {
+                config.global[key] = input?.value || defaultConfig.global[key];
             }
-            config.global[key] = document.getElementById(key)?.value || defaultConfig.global[key];
         }
 
         document.querySelectorAll('.tab').forEach(tab => {
@@ -892,13 +962,43 @@
         document.getElementById('buttonYCoord').value = defaultConfig.global.buttonYCoord;
     }
 
+    function getPlayersFromTabs() {
+        return Array.from(document.querySelectorAll('.tab')).filter(tab => tab.id !== 'global').map(tab => ({
+            name: tab.querySelector('[name="name"]').value || tab.name || 'Player',
+            enable: tab.querySelector('[name="enable"]').checked,
+        }));
+    }
+
+    function refreshDefaultPlayerOptions(players = getPlayersFromTabs(), preferredName) {
+        const defaultPlayer = document.getElementById('defaultPlayer');
+        if (!defaultPlayer) return;
+        const enabledPlayers = players.filter(player => player.enable !== false);
+        if (preferredName !== undefined) {
+            defaultPlayer.dataset.configuredValue = preferredName;
+            defaultPlayer.dataset.dirty = 'false';
+        }
+        const requestedName = defaultPlayer.dataset.dirty === 'true' ? defaultPlayer.value :
+            (defaultPlayer.dataset.configuredValue ?? preferredName ?? defaultPlayer.value);
+        defaultPlayer.replaceChildren(...enabledPlayers.map(player => new Option(player.name, player.name)));
+        defaultPlayer.disabled = enabledPlayers.length === 0;
+        const fallback = enabledPlayers.find(player => player.name === requestedName) ||
+            enabledPlayers.find(player => String(player.name).toUpperCase() === String(requestedName || '').toUpperCase()) ||
+            enabledPlayers.find(player => String(player.name).toUpperCase() === 'MPV') || enabledPlayers[0];
+        defaultPlayer.value = fallback?.name || '';
+    }
+
     function loadConfig(config) {
         // 全局配置
         for (const key in config.global) {
             if (key === 'parser' || !document.getElementById(key)) {
                 continue;
             }
-            document.getElementById(key).value = config.global[key];
+            const input = document.getElementById(key);
+            if (input.type === 'checkbox') {
+                input.checked = config.global[key] === true;
+            } else {
+                input.value = config.global[key];
+            }
         }
 
         document.getElementById('language').value = config.global.language;
@@ -937,6 +1037,7 @@
         // 播放器配置
         removeAllTab();
         config.players.forEach(player => createTab(`player${tabCount++}`, player.name, player));
+        refreshDefaultPlayerOptions(config.players, config.global.defaultPlayer);
 
         // 默认选中全局配置
         activateTab('global');
@@ -985,6 +1086,9 @@
 
         document.getElementById('language').addEventListener('change', (e) => {
             translatePage(e.target.value);
+        });
+        document.getElementById('defaultPlayer').addEventListener('change', event => {
+            event.currentTarget.dataset.dirty = 'true';
         });
         document.getElementById('add-tab-button').onclick = () => createTab(`tab${tabCount++}`);
         document.getElementById('global-button').onclick = () => activateTab('global');
